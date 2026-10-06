@@ -1,0 +1,28 @@
+name: AP News feed
+on:
+  schedule:
+    - cron: "17 * * * *"     # hourly, at :17 past (UTC)
+  workflow_dispatch: {}      # lets you run it by hand from the Actions tab
+permissions:
+  contents: write
+concurrency:
+  group: ap-feed
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Scrape AP Top News
+        run: python scrape_ap.py
+      - name: Commit feed if changed
+        run: |
+          git config user.name "ap-feed-bot"
+          git config user.email "ap-feed-bot@users.noreply.github.com"
+          git add docs/feed.xml data/seen.json
+          git diff --cached --quiet || git commit -m "Update AP feed $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
